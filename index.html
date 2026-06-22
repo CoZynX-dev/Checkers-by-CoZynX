@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0a0f">
+    <title>Checkers by CoZynX</title>
+    <meta name="description" content="A sleek, modern Checkers game — Player vs AI or Player vs Player. Built by CoZynX.">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="shortcut icon"              href="favicon.svg">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+
+        <div id="header-row">
+            <h1>Checkers <span class="brand">by CoZynX</span></h1>
+            <!-- Mode Toggle Pill -->
+            <div id="mode-toggle" role="group" aria-label="Game mode">
+                <button id="btn-mode-ai"  class="mode-btn active" onclick="setMode('ai')">
+                    <span class="mode-icon">🤖</span> vs AI
+                </button>
+                <button id="btn-mode-pvp" class="mode-btn"        onclick="setMode('pvp')">
+                    <span class="mode-icon">👥</span> PvP
+                </button>
+            </div>
+        </div>
+
+        <div id="status-bar">
+            <div id="player-indicator">
+                <span id="turn-dot"></span>
+                <span id="turn-text">Your Turn</span>
+            </div>
+            <div id="score">
+                <span class="score-purple">
+                    <span class="score-pip"></span>
+                    <span id="label-purple">You</span>: <strong id="score-purple">12</strong>
+                </span>
+                <span class="score-red">
+                    <span class="score-pip"></span>
+                    <span id="label-red">AI</span>: <strong id="score-red">12</strong>
+                </span>
+            </div>
+        </div>
+
+        <div id="board"></div>
+
+        <div id="controls">
+            <button id="btn-new-game" onclick="newGame()">New Game</button>
+            <button id="btn-undo"     onclick="undoMove()">Undo</button>
+        </div>
+
+        <div id="message-box"></div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

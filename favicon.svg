@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <defs>
+    <!-- Purple piece gradient -->
+    <radialGradient id="pg" cx="36%" cy="34%" r="66%">
+      <stop offset="0%"   stop-color="#d8a4ff"/>
+      <stop offset="55%"  stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </radialGradient>
+
+    <!-- Red piece gradient -->
+    <radialGradient id="rg" cx="36%" cy="34%" r="66%">
+      <stop offset="0%"   stop-color="#f0a0a0"/>
+      <stop offset="55%"  stop-color="#cd5c5c"/>
+      <stop offset="100%" stop-color="#8b2020"/>
+    </radialGradient>
+
+    <!-- Subtle purple glow -->
+    <filter id="pglow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Subtle red glow -->
+    <filter id="rglow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Outer card background -->
+  <rect width="32" height="32" rx="6" fill="#0d0d14"/>
+
+  <!-- 2×2 board cells -->
+  <!-- top-left (light) -->
+  <rect x="1"  y="1"  width="14" height="14" rx="2" fill="#16161f"/>
+  <!-- top-right (dark) -->
+  <rect x="17" y="1"  width="14" height="14" rx="2" fill="#0e0e16"/>
+  <!-- bottom-left (dark) -->
+  <rect x="1"  y="17" width="14" height="14" rx="2" fill="#0e0e16"/>
+  <!-- bottom-right (light) -->
+  <rect x="17" y="17" width="14" height="14" rx="2" fill="#16161f"/>
+
+  <!-- Purple piece — top-left cell -->
+  <circle cx="8"  cy="8"  r="5.2" fill="#6d28d9" filter="url(#pglow)"/>
+  <circle cx="8"  cy="8"  r="5.2" fill="url(#pg)"/>
+  <!-- specular highlight -->
+  <ellipse cx="6.4" cy="6.3" rx="1.6" ry="1" fill="white" opacity="0.28" transform="rotate(-20,6.4,6.3)"/>
+
+  <!-- Red piece — bottom-right cell -->
+  <circle cx="24" cy="24" r="5.2" fill="#8b2020" filter="url(#rglow)"/>
+  <circle cx="24" cy="24" r="5.2" fill="url(#rg)"/>
+  <!-- specular highlight -->
+  <ellipse cx="22.4" cy="22.3" rx="1.6" ry="1" fill="white" opacity="0.28" transform="rotate(-20,22.4,22.3)"/>
+
+</svg>
