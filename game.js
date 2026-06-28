@@ -1,29 +1,50 @@
 // =============================================
-// CHECKERS by CoZynX — Player vs AI  |  Player vs Player
+// CHECKERS by CoZynX — Player vs Bot  |  Player vs Player
 // =============================================
 
 // ── Piece constants ──
 const EMPTY       = 0;
 const PURPLE      = 1;       // Player 1 (Human / bottom)
 const PURPLE_KING = 2;
-const RED         = 3;       // Player 2 / AI (top)
+const RED         = 3;       // Player 2 / Bot (top)
 const RED_KING    = 4;
 
 // ── Player tokens ──
 const P1  = 'purple';   // Player 1 always uses purple pieces
-const P2  = 'red';      // Player 2 / AI always uses red pieces
+const P2  = 'red';      // Player 2 / Bot always uses red pieces
 
 // ── Game state ──
 let board         = [];
+let pieceIds      = [];
+let nextPieceId   = 1;
 let currentPlayer = P1;
 let selectedPiece = null;
 let validMoves    = [];
 let moveHistory   = [];
+let moveLogs      = [];
 let gameOver      = false;
 let aiThinking    = false;
 let gameMode      = 'ai';   // 'ai' | 'pvp'
+let botDifficulty = 'medium';
+let searchDepth   = 4;
+
+function getSquareName(r, c) {
+    const files = "ABCDEFGH";
+    return files[c] + (8 - r);
+}
 
 // ==================== MODE TOGGLE ====================
+
+function setDifficulty(diff) {
+    botDifficulty = diff;
+    if (diff === 'easy') searchDepth = 2;
+    else if (diff === 'medium') searchDepth = 4;
+    else if (diff === 'hard') searchDepth = 6;
+
+    document.getElementById('btn-diff-easy').classList.toggle('active', diff === 'easy');
+    document.getElementById('btn-diff-medium').classList.toggle('active', diff === 'medium');
+    document.getElementById('btn-diff-hard').classList.toggle('active', diff === 'hard');
+}
 
 function setMode(mode) {
     if (gameMode === mode) return;
@@ -32,6 +53,12 @@ function setMode(mode) {
     // Update button active states
     document.getElementById('btn-mode-ai').classList.toggle('active',  mode === 'ai');
     document.getElementById('btn-mode-pvp').classList.toggle('active', mode === 'pvp');
+
+    const diffEl = document.getElementById('difficulty-selector');
+    if (diffEl) {
+        if (mode === 'ai') diffEl.classList.remove('hidden');
+        else diffEl.classList.add('hidden');
+    }
 
     // Update score labels
     updateScoreLabels();
@@ -42,7 +69,7 @@ function setMode(mode) {
 
 function updateScoreLabels() {
     document.getElementById('label-purple').textContent = gameMode === 'pvp' ? 'Player 1' : 'You';
-    document.getElementById('label-red').textContent    = gameMode === 'pvp' ? 'Player 2' : 'AI';
+    document.getElementById('label-red').textContent    = gameMode === 'pvp' ? 'Player 2' : 'Bot';
 }
 
 // ==================== SOUND ENGINE ====================
@@ -99,15 +126,26 @@ function playKingSound() {
 
 function initBoard() {
     board = [];
+    pieceIds = [];
+    nextPieceId = 1;
     for (let r = 0; r < 8; r++) {
         board[r] = [];
+        pieceIds[r] = [];
         for (let c = 0; c < 8; c++) {
             if ((r + c) % 2 === 1) {
-                if (r < 3)      board[r][c] = RED;    // top
-                else if (r > 4) board[r][c] = PURPLE; // bottom
-                else            board[r][c] = EMPTY;
+                if (r < 3) {
+                    board[r][c] = RED;
+                    pieceIds[r][c] = nextPieceId++;
+                } else if (r > 4) {
+                    board[r][c] = PURPLE;
+                    pieceIds[r][c] = nextPieceId++;
+                } else {
+                    board[r][c] = EMPTY;
+                    pieceIds[r][c] = null;
+                }
             } else {
                 board[r][c] = EMPTY;
+                pieceIds[r][c] = null;
             }
         }
     }
@@ -119,11 +157,17 @@ function newGame() {
     selectedPiece = null;
     validMoves    = [];
     moveHistory   = [];
+    moveLogs      = [];
     gameOver      = false;
     aiThinking    = false;
+    
+    const boardEl = document.getElementById('board');
+    if (boardEl) boardEl.innerHTML = '';
+
     updateScoreLabels();
     renderBoard();
     updateStatus();
+    updateHistoryLog();
     showMessage('');
 }
 
@@ -131,25 +175,55 @@ function newGame() {
 
 function renderBoard() {
     const boardEl = document.getElementById('board');
-    boardEl.innerHTML = '';
+    
+    if (!boardEl.querySelector('.cell')) {
+        boardEl.innerHTML = '';
+        for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+                cell.id = `cell-${r}-${c}`;
+                boardEl.appendChild(cell);
+            }
+        }
+    }
 
     for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
-            const cell = document.createElement('div');
+            const cell = document.getElementById(`cell-${r}-${c}`);
+            if (!cell) continue;
             cell.className = 'cell ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
-            cell.dataset.row = r;
-            cell.dataset.col = c;
-
-            // Highlight valid move targets
             const moveIndex = validMoves.findIndex(m => m.row === r && m.col === c);
             if (moveIndex !== -1) {
                 cell.classList.add('highlight', 'move-target');
-                cell.addEventListener('click', () => executeMove(validMoves[moveIndex]));
+                cell.onclick = () => executeMove(validMoves[moveIndex]);
+            } else {
+                cell.onclick = null;
             }
+        }
+    }
 
+    const existingPieces = {};
+    boardEl.querySelectorAll('.piece').forEach(el => {
+        existingPieces[el.dataset.id] = el;
+    });
+
+    const currentIds = new Set();
+
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
             const piece = board[r][c];
             if (piece !== EMPTY) {
-                const pieceEl  = document.createElement('div');
+                const pid = pieceIds[r][c];
+                currentIds.add(pid.toString());
+
+                let pieceEl = existingPieces[pid];
+                if (!pieceEl) {
+                    pieceEl = document.createElement('div');
+                    pieceEl.dataset.id = pid;
+                    boardEl.appendChild(pieceEl);
+                }
+
                 const isPurple = piece === PURPLE || piece === PURPLE_KING;
                 const isKing   = piece === PURPLE_KING || piece === RED_KING;
                 const owner    = isPurple ? P1 : P2;
@@ -157,56 +231,72 @@ function renderBoard() {
                 pieceEl.className = 'piece ' + (isPurple ? 'purple' : 'red');
                 if (isKing) pieceEl.classList.add('king');
 
-                // Mark selected
                 if (selectedPiece && selectedPiece.row === r && selectedPiece.col === c) {
                     pieceEl.classList.add('selected');
                 }
 
-                // Determine if this piece is interactive this turn
                 const isMyTurn   = owner === currentPlayer;
                 const canControl = isMyTurn && !gameOver && !aiThinking &&
                                    (gameMode === 'pvp' || currentPlayer === P1);
 
                 if (canControl) {
-                    pieceEl.addEventListener('click', (e) => {
+                    pieceEl.onclick = (e) => {
                         e.stopPropagation();
                         selectPiece(r, c);
-                    });
+                    };
                     pieceEl.style.cursor = 'pointer';
                 } else {
+                    pieceEl.onclick = null;
                     pieceEl.style.cursor = 'default';
                 }
 
-                cell.appendChild(pieceEl);
+                pieceEl.style.setProperty('--row', r);
+                pieceEl.style.setProperty('--col', c);
             }
-
-            boardEl.appendChild(cell);
         }
     }
+
+    Object.keys(existingPieces).forEach(id => {
+        if (!currentIds.has(id)) {
+            existingPieces[id].remove();
+        }
+    });
 }
 
 function updateStatus() {
     const turnText = document.getElementById('turn-text');
     const turnDot  = document.getElementById('turn-dot');
+    const warningEl = document.getElementById('forced-jump-warning');
 
     if (gameOver) {
         turnText.textContent = 'Game Over';
+        if (warningEl) warningEl.classList.add('hidden');
         return;
     }
 
     if (currentPlayer === P1) {
         turnText.textContent = gameMode === 'pvp' ? 'Player 1\'s Turn' : 'Your Turn';
-        turnDot.className    = '';                    // purple dot (default)
+        turnDot.className    = '';
     } else {
         if (gameMode === 'pvp') {
             turnText.textContent = 'Player 2\'s Turn';
         } else {
-            turnText.textContent = aiThinking ? 'AI Thinking…' : 'AI\'s Turn';
+            turnText.textContent = aiThinking ? 'Bot Thinking…' : 'Bot\'s Turn';
         }
         turnDot.className = 'red';
     }
 
-    // Update piece counts
+    if (!gameOver && !aiThinking && ((gameMode === 'pvp') || (currentPlayer === P1))) {
+        const moves = getAllMoves(currentPlayer, board);
+        const hasJumps = moves.some(m => m.captures.length > 0);
+        if (warningEl) {
+            if (hasJumps) warningEl.classList.remove('hidden');
+            else warningEl.classList.add('hidden');
+        }
+    } else if (warningEl) {
+        warningEl.classList.add('hidden');
+    }
+
     let p1Count = 0, p2Count = 0;
     for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
@@ -218,6 +308,19 @@ function updateStatus() {
     document.getElementById('score-red').textContent    = p2Count;
 }
 
+function updateHistoryLog() {
+    const list = document.getElementById('history-log');
+    if (!list) return;
+    list.innerHTML = '';
+    moveLogs.forEach(msg => {
+        const div = document.createElement('div');
+        div.className = 'history-entry';
+        div.textContent = msg;
+        list.appendChild(div);
+    });
+    list.scrollTop = list.scrollHeight;
+}
+
 function showMessage(msg) {
     document.getElementById('message-box').textContent = msg;
 }
@@ -227,7 +330,7 @@ function winnerLabel(player) {
     if (gameMode === 'pvp') {
         return player === P1 ? 'Player 1' : 'Player 2';
     }
-    return player === P1 ? 'You' : 'AI';
+    return player === P1 ? 'You' : 'Bot';
 }
 
 // ==================== PIECE HELPERS ====================
@@ -380,15 +483,31 @@ function executeMove(move) {
     const fromCol = selectedPiece.col;
     const piece   = board[fromRow][fromCol];
 
-    moveHistory.push(JSON.parse(JSON.stringify(board)));
+    moveHistory.push({
+        board: JSON.parse(JSON.stringify(board)),
+        pieceIds: JSON.parse(JSON.stringify(pieceIds))
+    });
+
+    const playerName = piece === PURPLE || piece === PURPLE_KING ? 'Purple' : 'Red';
+    const toSquare = getSquareName(move.row, move.col);
+    let logMsg = `${playerName} moved to ${toSquare}`;
+    if (move.captures.length > 0) {
+        logMsg = `${playerName} jumped to ${toSquare}`;
+    }
+    moveLogs.push(logMsg);
+    updateHistoryLog();
 
     board[fromRow][fromCol] = EMPTY;
+    pieceIds[move.row][move.col] = pieceIds[fromRow][fromCol];
+    pieceIds[fromRow][fromCol] = null;
 
     const hadCaptures = move.captures.length > 0;
-    for (const cap of move.captures) board[cap.row][cap.col] = EMPTY;
+    for (const cap of move.captures) {
+        board[cap.row][cap.col] = EMPTY;
+        pieceIds[cap.row][cap.col] = null;
+    }
     if (hadCaptures) playCaptureSound();
 
-    // Promotion check
     let finalPiece = piece;
     let promoted   = false;
     if (piece === PURPLE && move.row === 0) { finalPiece = PURPLE_KING; promoted = true; }
@@ -411,8 +530,8 @@ function executeMove(move) {
 }
 
 function flashKing(row, col) {
-    const cells   = document.querySelectorAll('.cell');
-    const pieceEl = cells[row * 8 + col]?.querySelector('.piece');
+    const pid = pieceIds[row][col];
+    const pieceEl = document.querySelector(`.piece[data-id="${pid}"]`);
     if (pieceEl) {
         pieceEl.classList.add('king-promoted');
         setTimeout(() => pieceEl.classList.remove('king-promoted'), 700);
@@ -488,17 +607,27 @@ function undoMove() {
     if (moveHistory.length === 0 || aiThinking) return;
 
     if (gameMode === 'ai') {
-        // Undo both human + AI turns if possible
         if (currentPlayer === P1 && moveHistory.length >= 2) {
             moveHistory.pop();
-            board = moveHistory.pop();
+            moveLogs.pop();
+            const state = moveHistory.pop();
+            board = state.board;
+            pieceIds = state.pieceIds;
+            moveLogs.pop();
         } else if (moveHistory.length >= 1) {
-            board = moveHistory.pop();
+            const state = moveHistory.pop();
+            board = state.board;
+            pieceIds = state.pieceIds;
+            moveLogs.pop();
         }
         currentPlayer = P1;
     } else {
-        // PvP: undo one turn at a time
-        if (moveHistory.length >= 1) board = moveHistory.pop();
+        if (moveHistory.length >= 1) {
+            const state = moveHistory.pop();
+            board = state.board;
+            pieceIds = state.pieceIds;
+            moveLogs.pop();
+        }
         currentPlayer = currentPlayer === P1 ? P2 : P1;
     }
 
@@ -507,17 +636,18 @@ function undoMove() {
     gameOver      = false;
     renderBoard();
     updateStatus();
+    updateHistoryLog();
     showMessage('Move undone.');
 }
 
-// ==================== AI (Minimax + Alpha-Beta) ====================
+// ==================== BOT (Minimax + Alpha-Beta) ====================
 
 function aiMove() {
     const moves = getAllMoves(P2, board);
 
     if (moves.length === 0) {
         gameOver = true;
-        showMessage(`AI has no moves — ${winnerLabel(P1)} wins! 🎉`);
+        showMessage(`Bot has no moves — ${winnerLabel(P1)} wins! 🎉`);
         updateStatus(); renderBoard(); return;
     }
 
@@ -526,15 +656,28 @@ function aiMove() {
     for (const move of moves) {
         const saved = JSON.parse(JSON.stringify(board));
         applyMove(move, P2, board);
-        const score = minimax(board, 4, -Infinity, Infinity, false);
+        const score = minimax(board, searchDepth, -Infinity, Infinity, false);
         board = JSON.parse(JSON.stringify(saved));
         if (score > bestScore) { bestScore = score; bestMove = move; }
     }
 
     if (bestMove) {
-        moveHistory.push(JSON.parse(JSON.stringify(board)));
+        moveHistory.push({
+            board: JSON.parse(JSON.stringify(board)),
+            pieceIds: JSON.parse(JSON.stringify(pieceIds))
+        });
         const pieceBefore = board[bestMove.fromRow][bestMove.fromCol];
         const hadCaptures = bestMove.captures.length > 0;
+
+        const toSquare = getSquareName(bestMove.row, bestMove.col);
+        let logMsg = `Red moved to ${toSquare}`;
+        if (hadCaptures) logMsg = `Red jumped to ${toSquare}`;
+        moveLogs.push(logMsg);
+        updateHistoryLog();
+
+        pieceIds[bestMove.row][bestMove.col] = pieceIds[bestMove.fromRow][bestMove.fromCol];
+        pieceIds[bestMove.fromRow][bestMove.fromCol] = null;
+        for (const cap of bestMove.captures) pieceIds[cap.row][cap.col] = null;
 
         applyMove(bestMove, P2, board);
 

@@ -7,8 +7,26 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0a0a0f">
-    <title>Checkers by CoZynX</title>
-    <meta name="description" content="A sleek, modern Checkers game — Player vs AI or Player vs Player. Built by CoZynX.">
+    <title>Play Checkers Online (Vs Bot & PvP) | CoZynX</title>
+
+    <meta name="description" content="Play classic Checkers online — choose PvP or play vs bot. Smooth, modern UI with forced jumps and king promotions. Built by CoZynX.">
+    <meta name="keywords" content="checkers, classic checkers, play checkers online, checkers vs bot, checkers game, PvP checkers, board game">
+    <meta name="robots" content="index,follow">
+
+    <!-- Canonical (best effort for local usage; update if you deploy) -->
+    <link rel="canonical" href="./">
+
+    <!-- OpenGraph -->
+    <meta property="og:title" content="Play Checkers Online (Vs Bot & PvP) | CoZynX">
+    <meta property="og:description" content="Play classic Checkers online — choose PvP or play vs bot. Smooth, modern UI with forced jumps and king promotions. Built by CoZynX.">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Play Checkers Online (Vs Bot & PvP) | CoZynX">
+    <meta name="twitter:description" content="Play classic Checkers online — choose PvP or play vs bot. Smooth, modern UI with forced jumps and king promotions. Built by CoZynX.">
+
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="shortcut icon"              href="favicon.svg">
@@ -19,14 +37,25 @@
 
         <div id="header-row">
             <h1>Checkers <span class="brand">by CoZynX</span></h1>
-            <!-- Mode Toggle Pill -->
-            <div id="mode-toggle" role="group" aria-label="Game mode">
-                <button id="btn-mode-ai"  class="mode-btn active" onclick="setMode('ai')">
-                    <span class="mode-icon">🤖</span> vs AI
-                </button>
-                <button id="btn-mode-pvp" class="mode-btn"        onclick="setMode('pvp')">
-                    <span class="mode-icon">👥</span> PvP
-                </button>
+                <div id="header-controls">
+                    <div id="header-controls-row">
+                        <!-- Mode Toggle Pill -->
+                        <div id="mode-toggle" role="group" aria-label="Game mode">
+                            <button id="btn-mode-ai"  class="mode-btn active" onclick="setMode('ai')">
+                                <span class="mode-icon">🤖</span> vs Bot
+                            </button>
+                            <button id="btn-mode-pvp" class="mode-btn"        onclick="setMode('pvp')">
+                                <span class="mode-icon">👥</span> PvP
+                            </button>
+                        </div>
+
+                        <!-- Difficulty Selector -->
+                        <div id="difficulty-selector" class="diff-toggle">
+                        <button id="btn-diff-easy" class="diff-btn" onclick="setDifficulty('easy')">Easy</button>
+                        <button id="btn-diff-medium" class="diff-btn active" onclick="setDifficulty('medium')">Med</button>
+                        <button id="btn-diff-hard" class="diff-btn" onclick="setDifficulty('hard')">Hard</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -42,12 +71,19 @@
                 </span>
                 <span class="score-red">
                     <span class="score-pip"></span>
-                    <span id="label-red">AI</span>: <strong id="score-red">12</strong>
+                    <span id="label-red">Bot</span>: <strong id="score-red">12</strong>
                 </span>
             </div>
         </div>
 
-        <div id="board"></div>
+        <div id="forced-jump-warning" class="hidden">⚠️ Forced Jump Available!</div>
+        <div id="game-body">
+            <div id="board"></div>
+            <div id="move-history">
+                <div class="history-header">Move History</div>
+                <div id="history-log"></div>
+            </div>
+        </div>
 
         <div id="controls">
             <button id="btn-new-game" onclick="newGame()">New Game</button>
