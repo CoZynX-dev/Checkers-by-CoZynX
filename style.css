@@ -143,13 +143,7 @@ h1 {
     white-space: nowrap;
 }
 
-h1 .brand {
-    font-weight: 300;
-    color: var(--text-muted);
-    margin-left: 6px;
-    font-size: 0.55em;
-    letter-spacing: 0.02em;
-}
+
 
 /* ── Mode Toggle Pill ── */
 #mode-toggle {
@@ -584,6 +578,8 @@ h1 .brand {
 .piece.king-promoted {
     animation: king-flash 0.7s ease-out forwards;
 }
+
+
 
 /* ── Controls ── */
 #controls {

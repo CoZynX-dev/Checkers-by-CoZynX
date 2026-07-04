@@ -269,10 +269,25 @@ function updateStatus() {
     const warningEl = document.getElementById('forced-jump-warning');
 
     if (gameOver) {
+        // Always update the score on game over so the piece counts are correct.
+        let p1Count = 0, p2Count = 0;
+        for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+                if (board[r][c] === PURPLE || board[r][c] === PURPLE_KING) p1Count++;
+                if (board[r][c] === RED    || board[r][c] === RED_KING)    p2Count++;
+            }
+        }
+
+        const purpleEl = document.getElementById('score-purple');
+        const redEl    = document.getElementById('score-red');
+        if (purpleEl) purpleEl.textContent = p1Count;
+        if (redEl)    redEl.textContent    = p2Count;
+
         turnText.textContent = 'Game Over';
         if (warningEl) warningEl.classList.add('hidden');
         return;
     }
+
 
     if (currentPlayer === P1) {
         turnText.textContent = gameMode === 'pvp' ? 'Player 1\'s Turn' : 'Your Turn';
@@ -304,9 +319,13 @@ function updateStatus() {
             if (board[r][c] === RED    || board[r][c] === RED_KING)    p2Count++;
         }
     }
-    document.getElementById('score-purple').textContent = p1Count;
-    document.getElementById('score-red').textContent    = p2Count;
+    // Ensure scoreboard always reflects current board pieces (fixes edge case where game over occurs)
+    const purpleEl = document.getElementById('score-purple');
+    const redEl    = document.getElementById('score-red');
+    if (purpleEl) purpleEl.textContent = p1Count;
+    if (redEl)    redEl.textContent    = p2Count;
 }
+
 
 function updateHistoryLog() {
     const list = document.getElementById('history-log');
